@@ -22,8 +22,6 @@ const THRESHOLDS = {
 
 const PLATFORM_META = {
   linkedin:  { abbr: 'in', cls: 'icon-linkedin',  label: 'LinkedIn' },
-  twitter:   { abbr: 'X',  cls: 'icon-twitter',   label: 'Twitter / X' },
-  instagram: { abbr: 'ig', cls: 'icon-instagram',  label: 'Instagram' },
 }
 
 function stepIndex(status) {

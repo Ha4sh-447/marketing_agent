@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 
 const PLATFORMS = [
   { id: 'linkedin',  label: 'LinkedIn',    abbr: 'in',  cls: 'icon-linkedin' },
-  { id: 'twitter',   label: 'Twitter / X', abbr: 'X',   cls: 'icon-twitter' },
-  { id: 'instagram', label: 'Instagram',   abbr: 'ig',  cls: 'icon-instagram' },
 ]
 
 export default function NewRun() {
