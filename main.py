@@ -54,12 +54,20 @@ _running_tasks: dict[int, asyncio.Task] = {}
 
 @app.post("/api/run")
 async def start_run(
-    company_name: str = Form(...),
-    company_url: str = Form(...),
-    description: str = Form(...),
-    target_audience: str = Form(...),
+    company_name: str = Form(..., max_length=200),
+    company_url: str = Form(..., max_length=500),
+    description: str = Form(..., max_length=3000),
+    target_audience: str = Form(..., max_length=1000),
     platforms: list[str] = Form(...),
 ):
+    import re
+    # Basic input sanitization to catch blatant injection attempts
+    suspicious_patterns = r"(?i)(ignore previous instructions|system prompt|bypass|forget all|you are now)"
+    for field in [company_name, description, target_audience]:
+        if re.search(suspicious_patterns, field):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Invalid input detected.")
+
     company_id = save_company(company_name, company_url, description, target_audience)
     job_id = create_job(company_id, platforms)
 
