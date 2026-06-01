@@ -22,6 +22,7 @@ import asyncio
 import logging
 from openai import AsyncOpenAI, RateLimitError, AuthenticationError
 
+# pyrefly: ignore [missing-import]
 from src.config import (
     OPENROUTER_BASE_URL,
     NVIDIA_BASE_URL,
@@ -310,6 +311,7 @@ async def call_llm(
                 ],
                 temperature=temperature,
                 max_tokens=max_tokens,
+                stream=False,
             )
             if extra_headers:
                 kwargs["extra_headers"] = extra_headers
