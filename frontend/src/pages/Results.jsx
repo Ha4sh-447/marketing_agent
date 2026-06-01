@@ -490,10 +490,10 @@ export default function Results() {
 
   useEffect(() => {
     fetchStatus().then(status => {
-      if (status !== 'completed' && status !== 'failed') {
+      if (status !== 'completed' && status !== 'failed' && status !== 'cancelled') {
         pollRef.current = setInterval(async () => {
           const s = await fetchStatus()
-          if (s === 'completed' || s === 'failed') {
+          if (s === 'completed' || s === 'failed' || s === 'cancelled') {
             clearInterval(pollRef.current)
           }
         }, 2000)
@@ -554,7 +554,7 @@ export default function Results() {
     )
   }
 
-  const isRunning = data.status !== 'completed' && data.status !== 'failed'
+  const isRunning = data.status !== 'completed' && data.status !== 'failed' && data.status !== 'cancelled'
 
   // Build the chronological conversation sequence
   const chatMessages = []
@@ -685,6 +685,11 @@ export default function Results() {
     chatMessages.push({
       agent: 'system',
       text: `Critical Pipeline Error: ${data.error || 'All fallback options exhausted during generation.'}`
+    })
+  } else if (data.status === 'cancelled') {
+    chatMessages.push({
+      agent: 'system',
+      text: 'Pipeline was cancelled by the user.'
     })
   }
 

@@ -162,6 +162,14 @@ a:hover { text-decoration: underline; }
 }
 .btn-ghost:hover { background: var(--bg-card); color: var(--text-primary); }
 
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid rgba(239,68,68,0.3);
+}
+.btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+.btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* ── Form elements ───────────────────────────────────────────────────── */
 .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
 
@@ -285,6 +293,7 @@ h2 {
 .status-evaluating{ background: var(--accent-dim); color: var(--accent-light); }
 .status-completed { background: var(--green-dim);  color: var(--green); }
 .status-failed    { background: var(--red-dim);    color: var(--red); }
+.status-cancelled { background: var(--red-dim);    color: var(--red); }
 
 /* ── Score ring ──────────────────────────────────────────────────────── */
 .score-ring-wrap { display: flex; align-items: center; gap: 1rem; }

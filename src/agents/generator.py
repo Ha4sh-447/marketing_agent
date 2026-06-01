@@ -1,5 +1,8 @@
 import re
+import logging
 from src.agents.base import call_llm
+
+logger = logging.getLogger(__name__)
 from src.models import ContentStrategy, EvaluationResult
 
 SYSTEM_PROMPT = """You are a world-class social media copywriter. You write posts that look and feel like they were written by a real, senior person at the company — never like AI output.
@@ -173,6 +176,13 @@ CURRENT DRAFT — IMPROVE THIS, DON'T REPLACE IT
 
     content, hashtags = _parse_post_output(raw)
     content = _sanitize_post(content)
+
+    if not content.strip():
+        logger.error(
+            "Generator returned empty content after parsing/sanitizing. "
+            "Raw LLM output (%d chars): %.500s",
+            len(raw), raw,
+        )
 
     return content, hashtags
 

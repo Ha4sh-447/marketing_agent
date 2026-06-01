@@ -195,6 +195,35 @@ async def history():
     return JSONResponse(jsonable_encoder({"jobs": result}))
 
 
+@app.post("/api/run/{job_id}/cancel")
+async def cancel_run(job_id: int):
+    """Cancel a running pipeline."""
+    task = _running_tasks.get(job_id)
+    if task is None:
+        # No in-memory task — might still be a stale running status in DB
+        job = get_job(job_id)
+        if job and job["status"] not in ("completed", "failed", "cancelled"):
+            update_job_status(job_id, "cancelled")
+            return JSONResponse({"status": "cancelled", "detail": "Marked as cancelled (no active task)"})
+        return JSONResponse({"error": "No running task found for this job"}, status_code=404)
+
+    if task.done():
+        _running_tasks.pop(job_id, None)
+        return JSONResponse({"error": "Task already finished"}, status_code=409)
+
+    task.cancel()
+    # Wait briefly so CancelledError propagates and the pipeline's except block runs
+    try:
+        await asyncio.wait_for(asyncio.shield(task), timeout=2.0)
+    except (asyncio.CancelledError, asyncio.TimeoutError, Exception):
+        pass
+
+    update_job_status(job_id, "cancelled")
+    _running_tasks.pop(job_id, None)
+    logger.info("Pipeline job_id=%d cancelled by user", job_id)
+    return JSONResponse({"status": "cancelled"})
+
+
 # ---------------------------------------------------------------------------
 # SPA Catch-all — serve React frontend
 # ---------------------------------------------------------------------------

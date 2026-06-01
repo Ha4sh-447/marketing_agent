@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Any
 from datetime import datetime
 
 
@@ -50,8 +50,21 @@ class EvaluationResult(BaseModel):
     scores: dict[str, float] = Field(default_factory=dict)
     overall_score: float = 0.0
     passed: bool = False
-    feedback: dict[str, str] = Field(default_factory=dict)
+    feedback: dict[str, Any] = Field(default_factory=dict)
     trajectory_signal: str = "refine"
+
+    @field_validator("feedback", mode="before")
+    @classmethod
+    def coerce_feedback_lists(cls, v: Any) -> dict[str, Any]:
+        if isinstance(v, dict):
+            new_v = {}
+            for key, val in v.items():
+                if isinstance(val, list):
+                    new_v[key] = " ".join(str(x) for x in val)
+                else:
+                    new_v[key] = str(val)
+            return new_v
+        return v
 
 
 class GeneratedPost(BaseModel):

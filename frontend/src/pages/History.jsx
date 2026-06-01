@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+const RUNNING_STATUSES = ['queued', 'scraping', 'planning', 'generating', 'evaluating']
+
+function isRunning(status) {
+  return RUNNING_STATUSES.some(s => status.startsWith(s))
+}
+
 function StatusBadge({ status }) {
   return (
     <span className={`status-badge status-${status.split('_')[0]}`}>
@@ -12,13 +18,44 @@ function StatusBadge({ status }) {
 export default function History() {
   const [jobs, setJobs] = useState(null)
   const [error, setError] = useState('')
+  const [cancelling, setCancelling] = useState({})   // job_id → true while request in-flight
 
+  // Fetch once on mount
   useEffect(() => {
     fetch('/api/history')
       .then(r => r.json())
       .then(d => setJobs(d.jobs))
       .catch(() => setError('Failed to load history'))
   }, [])
+
+  // Auto-refresh every 3s while any job is still running
+  useEffect(() => {
+    if (!jobs || !jobs.some(j => isRunning(j.status))) return
+    const id = setInterval(() => {
+      fetch('/api/history')
+        .then(r => r.json())
+        .then(d => setJobs(d.jobs))
+        .catch(() => {})
+    }, 3000)
+    return () => clearInterval(id)
+  }, [jobs])
+
+  async function handleCancel(jobId) {
+    setCancelling(prev => ({ ...prev, [jobId]: true }))
+    try {
+      const res = await fetch(`/api/run/${jobId}/cancel`, { method: 'POST' })
+      if (res.ok) {
+        // Optimistically update status
+        setJobs(prev =>
+          prev.map(j => (j.id === jobId ? { ...j, status: 'cancelled' } : j))
+        )
+      }
+    } catch {
+      // Silently ignore — next poll will update
+    } finally {
+      setCancelling(prev => ({ ...prev, [jobId]: false }))
+    }
+  }
 
   return (
     <main>
@@ -74,13 +111,30 @@ export default function History() {
                       {job.created_at ? job.created_at.slice(0, 10) : '—'}
                     </td>
                     <td>
-                      <Link
-                        to={`/run/${job.id}`}
-                        className="btn btn-ghost"
-                        style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
-                      >
-                        View →
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        {isRunning(job.status) && (
+                          <button
+                            id={`cancel-job-${job.id}`}
+                            className="btn btn-danger"
+                            style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
+                            disabled={cancelling[job.id]}
+                            onClick={() => handleCancel(job.id)}
+                          >
+                            {cancelling[job.id] ? (
+                              <><span className="spinner" style={{ width: 12, height: 12 }} /> Cancelling…</>
+                            ) : (
+                              '✕ Cancel'
+                            )}
+                          </button>
+                        )}
+                        <Link
+                          to={`/run/${job.id}`}
+                          className="btn btn-ghost"
+                          style={{ padding: '0.3rem 0.75rem', fontSize: '0.8rem' }}
+                        >
+                          View →
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
