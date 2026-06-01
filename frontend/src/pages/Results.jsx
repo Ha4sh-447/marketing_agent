@@ -474,6 +474,7 @@ export default function Results() {
   const pollRef = useRef(null)
   const rerunnning = useRef(false)
   const chatBottomRef = useRef(null)
+  const shouldAutoScrollRef = useRef(true)
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -501,8 +502,24 @@ export default function Results() {
     return () => clearInterval(pollRef.current)
   }, [fetchStatus])
 
-  // Scroll to bottom of chat logs automatically
   useEffect(() => {
+    const threshold = 120
+    const updateAutoScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop
+      const viewport = window.innerHeight || document.documentElement.clientHeight
+      const docHeight = document.documentElement.scrollHeight
+      const distanceFromBottom = docHeight - (scrollTop + viewport)
+      shouldAutoScrollRef.current = distanceFromBottom < threshold
+    }
+    updateAutoScroll()
+    window.addEventListener('scroll', updateAutoScroll, { passive: true })
+    return () => window.removeEventListener('scroll', updateAutoScroll)
+  }, [])
+
+  // Scroll to bottom only when user is already near the bottom
+  useEffect(() => {
+    if (activeTab !== 'discussion') return
+    if (!shouldAutoScrollRef.current) return
     if (chatBottomRef.current) {
       chatBottomRef.current.scrollIntoView({ behavior: 'smooth' })
     }

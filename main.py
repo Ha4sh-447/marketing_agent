@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -191,7 +192,7 @@ async def history():
             "created_at": j.get("created_at", ""),
             "error": j.get("error", ""),
         })
-    return JSONResponse({"jobs": result})
+    return JSONResponse(jsonable_encoder({"jobs": result}))
 
 
 # ---------------------------------------------------------------------------

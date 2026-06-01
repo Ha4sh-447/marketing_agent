@@ -2,7 +2,7 @@ import re
 from src.agents.base import call_llm
 from src.models import ContentStrategy, EvaluationResult
 
-SYSTEM_PROMPT = """You are a world-class social media copywriter. You write posts that look and feel like they were written by a real person at the company — never like AI output.
+SYSTEM_PROMPT = """You are a world-class social media copywriter. You write posts that look and feel like they were written by a real, senior person at the company — never like AI output.
 
 ## YOUR OUTPUT FORMAT
 
@@ -13,76 +13,84 @@ You must output the post in this EXACT format — nothing else before or after:
 ---HASHTAGS---
 [comma-separated hashtags without # symbols, e.g. startup, saas, growth]
 
-## CRITICAL RULES
+## ABSOLUTE RULES — VIOLATIONS WILL CAUSE REJECTION
 
-1. Output ONLY the post content between the markers. No preamble ("Here's your post:"), no explanation, no meta-commentary.
-2. NEVER include <think>, </think>, or any reasoning tags.
-3. NEVER start with "In today's...", "Let's dive into...", "Are you tired of...".
-4. NEVER use: "revolutionary", "game-changer", "cutting-edge", "unlock potential", "transformative", "elevate", "leverage", "innovative", "seamless", "holistic", "paradigm".
-5. Write like a real human at this company would. Use specific details from their website.
-6. Use 0-2 emojis maximum. Never emoji-spam.
-7. Every post MUST have a clear call-to-action at the end.
+1. Output ONLY the ---POST--- / ---HASHTAGS--- block. Zero preamble. Zero meta-commentary. Zero explanation.
+2. NEVER include <think>, </think>, <|thinking|>, or any internal reasoning tags in the output.
+3. NEVER open with: "In today's...", "Let's dive into...", "Are you tired of...", "What if you could...", "Have you ever wondered...", "Imagine a world where..."
+4. NEVER use these words or phrases — instant rejection: "revolutionary", "game-changer", "cutting-edge", "unlock potential", "transformative", "elevate", "leverage", "innovative", "seamless", "holistic", "paradigm", "empower", "robust", "scalable", "synergy", "disruptive", "next-generation", "state-of-the-art", "best-in-class", "world-class", "end-to-end", "out-of-the-box", "drill down", "move the needle", "circle back", "at the end of the day".
+5. Use SPECIFIC details from the company's scraped content. Do not invent features.
+6. Use 0–2 emojis maximum. Emoji spam = instant rejection.
+7. Every post MUST end with a clear, specific call-to-action.
+8. Hashtags go ONLY in the ---HASHTAGS--- section, never inline in the post body.
 
-## PLATFORM-SPECIFIC STRUCTURES
+## PLATFORM-SPECIFIC RULES
 
-### LinkedIn (1300-2000 characters)
-- Open with a hook: a surprising stat, contrarian take, or specific question
-- 2-3 short paragraphs with line breaks between them
-- Use concrete specifics from the company (product names, features, metrics)
-- End with a clear CTA (try free, visit site, comment your take)
-- Hashtags go in the ---HASHTAGS--- section, not inline
+### LinkedIn (1300–2000 characters)
+- Hook: a surprising stat, a contrarian take, or a specific insight — NOT a generic question
+- 3–5 short paragraphs with blank lines between them (LinkedIn rewards scannable structure)
+- Each paragraph: 1–3 sentences max
+- Include one concrete, specific detail from the company (a metric, a product name, a real feature, a customer outcome)
+- CTA at the very end: visit the site, try free, comment a specific question
 
-### Twitter / X (under 280 characters)
-- Punchy, single-thought post
-- No filler words
-- Optional: 1 emoji
-- CTA in the last line
+### Twitter / X (200–280 characters including CTA)
+- Single punchy thought — cut everything that isn't load-bearing
+- No filler, no em-dashes used decoratively, no "Here's the thing:"
+- CTA must fit in the character count
 
-### Instagram (150-300 characters caption)
-- Conversational, warm tone
-- Tell a micro-story or share an insight
-- End with a question or CTA to drive comments
-- Hashtags go in ---HASHTAGS--- section (8-15 hashtags)
+### Instagram (150–300 characters caption)
+- Warm, conversational tone — like a message from a person, not a brand
+- Micro-story or specific insight
+- End with a direct question or CTA to drive comments
+- 8–15 hashtags in the ---HASHTAGS--- section
 
-## EXAMPLES OF GREAT POSTS
+## WHAT GREAT LOOKS LIKE
 
 ### LinkedIn Example:
 ---POST---
-We spent 6 months talking to 200+ D2C founders about one question: "What do you wish you knew about your customers?"
+We talked to 200+ D2C founders about their biggest blind spot.
 
-The #1 answer wasn't about demographics or purchase data.
+Not acquisition. Not shipping. Not even returns.
 
-It was: "Why do people stop coming back?"
+It was: "Why do customers buy once and never come back?"
 
-That's why we built Compra's post-purchase surveys. Not another feedback form — a 2-minute setup that asks the right question at the right moment.
+That's the question Compra's post-purchase surveys are built around. Two minutes to set up. One question at the right moment — right after delivery, right after a return.
 
-One brand found that 34% of churned customers left because of packaging, not product. They fixed it in a week.
+One brand discovered 34% of their churn came from packaging, not the product. Fixed in a week.
 
-Try it free at compra.com — no credit card needed.
+If you're running a Shopify store and you don't know why customers leave, try it free at compra.com.
 ---HASHTAGS---
 D2Cbrands, customerfeedback, ecommerce, retention, shopify
 
 ### Twitter Example:
 ---POST---
-Your customers already know why they're leaving. You're just not asking.
+Your customers know exactly why they stopped buying from you.
 
-We built a tool that asks — right after purchase, right after returns.
+You just haven't asked.
 
-Takes 2 min to set up. Free to try.
+Compra does. Free to try: compra.com
 ---HASHTAGS---
 D2C, ecommerce
 
 ### Instagram Example:
 ---POST---
+One question changed everything for a brand we work with.
+
 "Why did you almost not buy from us?"
 
-That's the question that changed everything for one of our brands. The answer? Their checkout felt sketchy on mobile.
+The answer: their checkout felt sketchy on mobile. Fixed in 3 days. Conversion up 22%.
 
-Fixed in 3 days. Conversion up 22%.
-
-What's the one question you'd ask your customers? 👇
+What question would you ask your customers? 👇
 ---HASHTAGS---
 ecommerce, d2cbrands, customerfeedback, shopify, ecommercetips, brandgrowth, customerinsights, shopifystore"""
+
+
+# Platform character limits for validation hint in prompt
+_PLATFORM_LIMITS = {
+    "linkedin":  (1300, 2000),
+    "twitter":   (50,   280),
+    "instagram": (150,  300),
+}
 
 
 async def generate_post(
@@ -94,17 +102,19 @@ async def generate_post(
     trajectory: str = "refine",
     previous_content: str | None = None,
 ) -> tuple[str, str]:
+
     plat = strategy.platform_strategies.get(platform, None)
     platform_guidance = ""
     if plat:
+        char_min, char_max = _PLATFORM_LIMITS.get(platform, (0, 99999))
         platform_guidance = f"""Platform: {platform}
 Post type: {plat.post_type}
-Target length: {plat.length_guidance}
+Target length: {plat.length_guidance} ({char_min}–{char_max} characters for the post body — count carefully)
 Hashtag strategy: {plat.hashtag_strategy}
 Content angle: {plat.content_angle}
 Hook style: {plat.hook_style}
 CTA type: {plat.cta_type}
-Example hook to riff on: {plat.example_hook}"""
+Example hook (use this as a starting point, do NOT copy verbatim): {plat.example_hook}"""
 
     user = f"""Company: {company_name}
 Campaign Goal: {strategy.campaign_goal}
@@ -113,35 +123,53 @@ Tone Guidelines: {strategy.tone_guidelines}
 
 {platform_guidance}
 
-Scraped Brand Content (use real details from this):
+Scraped Brand Content (ground the post in these real details):
 {scraped_text[:1800]}"""
 
-    if feedback:
+    # Attach evaluator feedback when refining
+    if feedback and feedback.scores:
         fb_lines = []
-        for criterion, score in feedback.scores.items():
-            fb_lines.append(f"- {criterion}: {score}/10 — {feedback.feedback.get(criterion, '')}")
+        for criterion, score in sorted(
+            feedback.scores.items(), key=lambda x: x[1]  # worst scores first
+        ):
+            fb_lines.append(
+                f"- {criterion}: {score}/10 — {feedback.feedback.get(criterion, 'no detail')}"
+            )
+        approach_instruction = (
+            "Surgically fix each issue listed below while keeping everything that already works. "
+            "Do NOT rewrite sections that scored 8+."
+            if trajectory == "refine"
+            else
+            "The previous approach is not working. Start from scratch with a completely different "
+            "hook, angle, and structure. The only thing to keep is the brand/product specifics."
+        )
         user += f"""
 
-PREVIOUS ATTEMPT FEEDBACK (fix these issues):
-{chr(10).join(fb_lines)}
+═══════════════════════════════════════
+EVALUATOR FEEDBACK — ADDRESS EVERY POINT
+═══════════════════════════════════════
+Approach: {trajectory.upper()} — {approach_instruction}
 
-Approach: {trajectory.upper()}
-{"Fix the specific issues above while keeping what works well." if trajectory == "refine" else "Take a completely different approach — new hook, new angle, new structure."}"""
+Scores (worst first — focus here):
+{chr(10).join(fb_lines)}"""
 
-    if previous_content:
+    if previous_content and trajectory == "refine":
         user += f"""
 
-=== YOUR CURRENT POST DRAFT TO IMPROVE ===
+═══════════════════════════════════════
+CURRENT DRAFT — IMPROVE THIS, DON'T REPLACE IT
+═══════════════════════════════════════
 {previous_content}
-=========================================
+═══════════════════════════════════════"""
 
-You must take this current post draft and re-iterate directly over it to improve it based on the feedback and instructions. Do not rewrite from scratch unless trajectory is 'PIVOT'."""
+    user += "\n\nOutput ONLY the ---POST--- and ---HASHTAGS--- block. Nothing else."
 
-    user += """
+    # Use higher temperature for pivot to force genuine novelty
+    temperature = 0.95 if trajectory == "pivot" else 0.75
 
-Remember: Output ONLY the ---POST--- and ---HASHTAGS--- format. No other text."""
-
-    raw = await call_llm(SYSTEM_PROMPT, user, role="generator", temperature=0.75, max_tokens=1024)
+    raw = await call_llm(
+        SYSTEM_PROMPT, user, role="generator", temperature=temperature, max_tokens=1024
+    )
 
     content, hashtags = _parse_post_output(raw)
     content = _sanitize_post(content)
@@ -156,7 +184,7 @@ def _parse_post_output(raw: str) -> tuple[str, str]:
     """
     raw = raw.strip()
 
-    # Try structured markers first
+    # Primary: structured markers
     if "---POST---" in raw:
         after_post = raw.split("---POST---", 1)[1]
         if "---HASHTAGS---" in after_post:
@@ -164,16 +192,22 @@ def _parse_post_output(raw: str) -> tuple[str, str]:
             return content.strip(), hashtags.strip()
         return after_post.strip(), ""
 
-    # Fallback: look for a line that's clearly hashtags
+    # Fallback: detect a hashtag line scanning from the bottom
     lines = raw.split("\n")
     hashtag_line_idx = None
     for i in range(len(lines) - 1, -1, -1):
         line = lines[i].strip()
-        # Detect lines that are mostly hashtags
         if line and (
             line.count("#") >= 3
             or line.lower().startswith("hashtags")
-            or (line.count(",") >= 2 and all(w.strip().replace("#", "").isalnum() for w in line.split(",") if w.strip()))
+            or (
+                line.count(",") >= 2
+                and all(
+                    w.strip().replace("#", "").isalnum()
+                    for w in line.split(",")
+                    if w.strip()
+                )
+            )
         ):
             hashtag_line_idx = i
             break
@@ -181,48 +215,65 @@ def _parse_post_output(raw: str) -> tuple[str, str]:
     if hashtag_line_idx is not None:
         content = "\n".join(lines[:hashtag_line_idx]).strip()
         hashtags = lines[hashtag_line_idx].strip()
-        # Clean up hashtag line
         if hashtags.lower().startswith("hashtags"):
-            hashtags = hashtags.split(":", 1)[-1].strip() if ":" in hashtags else hashtags[8:].strip()
+            hashtags = (
+                hashtags.split(":", 1)[-1].strip()
+                if ":" in hashtags
+                else hashtags[8:].strip()
+            )
         hashtags = hashtags.replace("#", "").strip()
         return content, hashtags
 
-    # Last resort: return everything as content
     return raw.strip(), ""
 
 
 def _sanitize_post(content: str) -> str:
     """
-    Clean up common LLM artifacts from post content:
-    - "Here's your LinkedIn post:" preambles
-    - Markdown formatting (bold markers, headers)
-    - Stray code fences
-    - Meta-commentary
+    Strip common LLM artifacts from post content:
+    - Reasoning tags from various model families
+    - Preamble lines
+    - Markdown formatting artefacts
+    - Stray delimiters
     """
-    # Remove common preambles (case-insensitive)
+    # Remove reasoning tags — covers DeepSeek, GLM, GPT-OSS, Qwen styles
+    reasoning_patterns = [
+        r"<think>.*?</think>",
+        r"<think>.*",               # unclosed
+        r"<\|thinking\|>.*?<\|/thinking\|>",
+        r"<\|thinking\|>.*",        # unclosed
+        r"\[thinking\].*?\[/thinking\]",
+        r"<reasoning>.*?</reasoning>",
+        r"<reasoning>.*",           # unclosed
+    ]
+    for pat in reasoning_patterns:
+        content = re.sub(pat, "", content, flags=re.DOTALL)
+
+    # Remove preamble lines (case-insensitive)
     preamble_patterns = [
-        r"^(?:here(?:'s| is) (?:your|the|a) .{0,30}(?:post|content|draft)[:\s]*\n*)",
-        r"^(?:(?:linkedin|twitter|instagram|x) post[:\s]*\n*)",
+        r"^(?:here(?:'s| is) (?:your|the|a|an) .{0,40}(?:post|content|draft|caption)[:\s]*\n*)",
+        r"^(?:(?:linkedin|twitter|instagram|x|social media) (?:post|caption)[:\s]*\n*)",
         r"^(?:post[:\s]*\n+)",
         r"^(?:caption[:\s]*\n+)",
+        r"^(?:sure[!,.]?\s+here(?:'s| is).*?\n)",
+        r"^(?:of course[!,.]?\s+here(?:'s| is).*?\n)",
     ]
     for pat in preamble_patterns:
         content = re.sub(pat, "", content, flags=re.IGNORECASE)
 
-    # Remove markdown bold/italic markers but keep the text
+    # Strip markdown bold/italic but keep text
     content = re.sub(r"\*\*(.+?)\*\*", r"\1", content)
     content = re.sub(r"\*(.+?)\*", r"\1", content)
 
-    # Remove markdown headers
+    # Strip markdown headers
     content = re.sub(r"^#{1,3}\s+", "", content, flags=re.MULTILINE)
 
-    # Remove code fences
+    # Strip code fences
     content = re.sub(r"```\w*\n?", "", content)
 
-    # Remove stray --- markers
+    # Strip stray --- delimiters
     content = re.sub(r"^---+\s*$", "", content, flags=re.MULTILINE)
 
-    # Clean up excessive blank lines (max 2 consecutive)
+    # Collapse 3+ blank lines to 2
     content = re.sub(r"\n{3,}", "\n\n", content)
 
     return content.strip()
