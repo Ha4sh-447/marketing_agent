@@ -200,6 +200,13 @@ def init_db():
 
 
 def save_company(name: str, url: str, description: str, target_audience: str) -> int:
+    existing = _execute_one("SELECT id FROM companies WHERE url=?", (url,))
+    if existing:
+        _execute_write(
+            "UPDATE companies SET name=?, description=?, target_audience=? WHERE id=?",
+            (name, description, target_audience, existing["id"])
+        )
+        return existing["id"]
     return _execute_insert(
         "INSERT INTO companies (name, url, description, target_audience) VALUES (?, ?, ?, ?)",
         (name, url, description, target_audience),

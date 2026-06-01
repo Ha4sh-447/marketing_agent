@@ -247,7 +247,7 @@ def _build_chains() -> dict[str, list[tuple[str, str, dict]]]:
             ("openrouter", PLANNER_MODEL,          or_h),
             ("openrouter", PLANNER_MODEL_FALLBACK,  or_h),
             ("groq",       PLANNER_GROQ_MODEL,      {}),
-            ("nvidia",     "google/gemma-4-31b-it",             {}),
+            ("nvidia",     "google/gemma-2-27b-it",             {}),
             ("nvidia",     "meta/llama-3.3-70b-instruct",       {}),
         ],
         # GENERATOR — Mistral direct API primary, fast + great copywriting
@@ -256,14 +256,14 @@ def _build_chains() -> dict[str, list[tuple[str, str, dict]]]:
             ("openrouter", GENERATOR_MODEL,          or_h),
             ("openrouter", GENERATOR_MODEL_FALLBACK,  or_h),
             ("groq",       GENERATOR_GROQ_MODEL,      {}),
-            ("nvidia",     "google/gemma-4-31b-it",             {}),
+            ("nvidia",     "google/gemma-2-27b-it",             {}),
         ],
         # EVALUATOR — structured checklist scoring; fast models sufficient
         "evaluator": [
             ("openrouter", EVALUATOR_MODEL,          or_h),
             ("openrouter", EVALUATOR_MODEL_FALLBACK,  or_h),
             ("groq",       EVALUATOR_GROQ_MODEL,      {}),
-            ("nvidia",     "google/gemma-4-31b-it",              {}),
+            ("nvidia",     "google/gemma-2-27b-it",              {}),
             ("nvidia",     "meta/llama-3.1-8b-instruct",         {}),
         ],
     }

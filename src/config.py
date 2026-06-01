@@ -22,7 +22,7 @@ MISTRAL_BASE_URL = os.getenv("MISTRAL_BASE_URL", "https://api.mistral.ai/v1")
 # PLANNER — runs once per campaign. Needs strong structured JSON reasoning.
 # Large models preferred. Quality > speed.
 # ---------------------------------------------------------------------------
-PLANNER_MODEL          = os.getenv("PLANNER_MODEL",          "google/gemma-4-31b-it:free")
+PLANNER_MODEL          = os.getenv("PLANNER_MODEL",          "google/gemma-2-27b-it:free")
 PLANNER_MODEL_FALLBACK = os.getenv("PLANNER_MODEL_FALLBACK", "openai/gpt-oss-120b:free")
 
 # ---------------------------------------------------------------------------
