@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}New Run{% endblock %}
+{% block content %}
+<h1>Generate Marketing Posts</h1>
+<p>Enter a company's details and the agent will scrape their website, plan a strategy, and generate platform-optimized posts.</p>
+
+<form action="/run" method="post">
+    <div class="grid">
+        <div>
+            <label for="company_name">Company Name</label>
+            <input type="text" id="company_name" name="company_name" required placeholder="e.g. Acme Corp">
+        </div>
+        <div>
+            <label for="company_url">Website URL</label>
+            <input type="url" id="company_url" name="company_url" required placeholder="https://example.com">
+        </div>
+    </div>
+
+    <label for="description">Company Description</label>
+    <input type="text" id="description" name="description" required placeholder="What does the company do?">
+
+    <label for="target_audience">Target Audience</label>
+    <input type="text" id="target_audience" name="target_audience" required placeholder="e.g. B2B SaaS founders, developers, marketers">
+
+    <fieldset>
+        <legend>Platforms</legend>
+        <label>
+            <input type="checkbox" name="platforms" value="linkedin" checked>
+            LinkedIn
+        </label>
+        <label>
+            <input type="checkbox" name="platforms" value="twitter">
+            Twitter / X
+        </label>
+        <label>
+            <input type="checkbox" name="platforms" value="instagram">
+            Instagram
+        </label>
+    </fieldset>
+
+    <button type="submit">Generate Posts</button>
+</form>
+{% endblock %}

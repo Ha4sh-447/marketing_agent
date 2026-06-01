@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_name }} — {% block title %}Home{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+        .status-queued { background: #fef3c7; color: #92400e; }
+        .status-scraping, .status-planning { background: #dbeafe; color: #1e40af; }
+        .status-generating, .status-evaluating { background: #ede9fe; color: #5b21b6; }
+        .score-pass { color: #059669; font-weight: 700; }
+        .score-fail { color: #dc2626; font-weight: 700; }
+        .post-card { border-left: 4px solid var(--primary); padding-left: 1rem; margin-bottom: 1.5rem; }
+        .criteria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        @media (max-width: 600px) { .criteria-grid { grid-template-columns: 1fr; } }
+        .nav-links { display: flex; gap: 1rem; align-items: center; }
+    </style>
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul><li><strong><a href="/">{{ site_name }}</a></strong></li></ul>
+        <ul class="nav-links">
+            <li><a href="/">New Run</a></li>
+            <li><a href="/history">History</a></li>
+        </ul>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

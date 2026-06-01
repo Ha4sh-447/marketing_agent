@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<h1>Run History</h1>
+
+{% if jobs %}
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Company</th>
+            <th>Platforms</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td>{{ job.id }}</td>
+            <td>{{ job.company_name }}</td>
+            <td>{{ job.platforms | from_json | join(", ") }}</td>
+            <td><span class="status-badge status-{{ job.status }}">{{ job.status }}</span></td>
+            <td>{{ job.created_at[:10] if job.created_at else "" }}</td>
+            <td>
+                <a href="/run/{{ job.id }}">View</a>
+                {% if job.status == "failed" %}
+                | <a href="/run/{{ job.id }}/rerun">Re-run</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No runs yet. <a href="/">Create one</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Run Results{% endblock %}
+{% block content %}
+<h1>Run #{{ job_id }}</h1>
+<p id="company-label">Company: <strong>{{ company_name }}</strong></p>
+
+<div id="status-area">
+    <p>
+        Status:
+        <span id="status-badge" class="status-badge status-{{ status }}">{{ status }}</span>
+    </p>
+    {% if status == "queued" %}
+    <progress value="0" max="100" id="progress-bar"></progress>
+    {% elif status == "scraping" %}
+    <p>Scraping website...</p>
+    <progress indeterminate id="progress-bar"></progress>
+    {% elif status == "planning" %}
+    <p>Planning content strategy...</p>
+    <progress indeterminate id="progress-bar"></progress>
+    {% elif status.startswith("generating") %}
+    <p>Generating post for <strong>{{ status.split("_")[1] }}</strong>...</p>
+    <progress indeterminate id="progress-bar"></progress>
+    {% elif status.startswith("evaluating") %}
+    <p>Evaluating {{ status.split("_")[1] }} (attempt {{ status.split("_")[3] }})...</p>
+    <progress indeterminate id="progress-bar"></progress>
+    {% elif status == "completed" %}
+    <p>✅ All posts generated.</p>
+    {% elif status == "failed" %}
+    <p>❌ Run failed: {{ error }}</p>
+    {% endif %}
+</div>
+
+<div id="posts-area" style="margin-top: 2rem;">
+    {% if posts %}
+    <h2>Generated Posts</h2>
+    {% for post in posts %}
+    <div class="post-card">
+        <h3>{{ post.platform | capitalize }}</h3>
+        <div class="criteria-grid">
+            <div>
+                <p><strong>Score:</strong>
+                    <span class="{% if post.passed_eval %}score-pass{% else %}score-fail{% endif %}">
+                        {{ "%.1f"|format(post.final_score) }}/10
+                    </span>
+                </p>
+                <p><strong>Iterations:</strong> {{ post.iterations }}</p>
+                <p><strong>Passed eval:</strong> {{ "Yes" if post.passed_eval else "No" }}</p>
+            </div>
+        </div>
+        <pre style="white-space: pre-wrap; background: var(--card-background-color); padding: 1rem; border-radius: 8px;">{{ post.content }}</pre>
+        {% if post.hashtags %}
+        <p><strong>Hashtags:</strong> {{ post.hashtags }}</p>
+        {% endif %}
+
+        {% if post.eval_history and post.eval_history != "[]" %}
+        <details>
+            <summary>Evaluation History</summary>
+            {% set history = post.eval_history | from_json %}
+            {% for entry in history %}
+            <div style="margin: 1rem 0; padding: 0.75rem; background: var(--card-background-color); border-radius: 8px;">
+                <p><strong>Attempt {{ entry.attempt }}</strong> — Score: {{ "%.1f"|format(entry.overall_score) }}/10 —
+                    {% if entry.passed %}<span class="score-pass">PASSED</span>{% else %}<span class="score-fail">FAILED</span>{% endif %}
+                    — Trajectory: {{ entry.trajectory }}
+                </p>
+                <div class="criteria-grid">
+                    {% for criterion, score in entry.scores.items() %}
+                    <div style="font-size: 0.9rem;">
+                        <span>{{ criterion | replace("_", " ") | title }}:</span>
+                        <span class="{% if (score|float) >= 7 %}score-pass{% else %}score-fail{% endif %}">{{ "%.1f"|format(score) }}/10</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if entry.content %}
+                <pre style="white-space: pre-wrap; font-size: 0.85rem; margin-top: 0.5rem;">{{ entry.content[:200] }}{% if entry.content|length > 200 %}...[truncated]{% endif %}</pre>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </details>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<div style="margin-top: 2rem;">
+    <a href="/" role="button" class="secondary">New Run</a>
+    <a href="/run/{{ job_id }}/rerun" role="button" class="outline">Re-run</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const jobId = {{ job_id }};
+const statusEl = document.getElementById('status-badge');
+const postsArea = document.getElementById('posts-area');
+
+function poll() {
+    fetch(`/run/${jobId}/status`)
+        .then(r => r.json())
+        .then(data => {
+            const status = data.status;
+            statusEl.textContent = status;
+            statusEl.className = 'status-badge status-' + status.replace(/_/g, '-').split('-')[0];
+
+            if (status === 'completed' || status === 'failed') {
+                // Reload to show full results
+                if (data.posts && data.posts.length > 0) {
+                    location.reload();
+                } else {
+                    setTimeout(poll, 2000);
+                }
+                return;
+            }
+            setTimeout(poll, 2000);
+        })
+        .catch(() => setTimeout(poll, 3000));
+}
+
+const currentStatus = '{{ status }}';
+if (currentStatus !== 'completed' && currentStatus !== 'failed') {
+    setTimeout(poll, 1000);
+}
+</script>
+{% endblock %}
